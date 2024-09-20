@@ -1,0 +1,3 @@
+[submodule "3rdparty/iniparser"]
+	path = 3rdparty/iniparser
+	url = https://gitlab.com/iniparser/iniparser.git

@@ -13,7 +13,7 @@
 
 #include "reporter_error.h"
 
-char const * find_sqm_le_device_mac() {
+char const * find_sqm_le_device_mac(void) {
     return NULL;
 }
 

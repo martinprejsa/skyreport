@@ -3,4 +3,5 @@ set(BUILD_EXAMPLES OFF)
 set(BUILD_TESTING OFF)
 set(BUILD_STATIC_LIBS ON)
 set(BUILD_SHARED_LIBS OFF)
+
 add_subdirectory(iniparser)

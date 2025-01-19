@@ -36,11 +36,9 @@ typedef struct {
 } await_connection_params;
 
 
-static char _interrupt = 0;
+volatile sig_atomic_t _interrupt = 0;
 
-void wh2600_handle_sigint(int signal) {
-    if(signal != SIGINT)
-        return;
+void handle_signal(int signal) {
     _interrupt = 1;
 }
 
@@ -160,7 +158,7 @@ void* await_connection(void * params) {
 }
 
 wh2600_response wh2600_query(uint64_t timeout, uint16_t port, reporter_error *error) {
-    signal(SIGINT, wh2600_handle_sigint);
+    signal(SIGINT, handle_signal);
     int fd;
 
     if((fd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {

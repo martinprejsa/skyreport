@@ -14,9 +14,9 @@ set(CMAKE_INSTALL_RPATH $ORIGIN)
 
 add_subdirectory(3rdparty)
 
-target_compile_options(skyreport PUBLIC -Werror -Wall -pedantic -fvisibility=hidden)
+target_compile_options(skyreport PUBLIC -Wall -pedantic -fvisibility=hidden -fanalyzer)
 
-target_sources(skyreport PRIVATE source/main.c source/sqm_le.c source/wh2600.c)
+target_sources(skyreport PRIVATE source/main.c source/sqm_le.c source/wh2600.c source/bh1750.c)
 target_include_directories(skyreport PRIVATE source/include)
 target_link_libraries(skyreport PRIVATE iniparser-static)
 

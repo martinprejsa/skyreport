@@ -1,5 +1,5 @@
-#ifndef REPORTER_SQM_LE_H
-#define REPORTER_SQM_LE_H
+#ifndef SKYREPORT_SQM_LE_H
+#define SKYREPORT_SQM_LE_H
 
 #include <stdint.h>
 
@@ -26,5 +26,5 @@ void sqm_le_disconnect(sqm_le_device * const);
 * */
 double sqm_le_read(sqm_le_device const * const device, reporter_error *error);
 
-#endif // REPORTER_SQM_LE_H
+#endif // SKYREPORT_SQM_LE_H
 

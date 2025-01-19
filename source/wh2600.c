@@ -42,7 +42,7 @@ void wh2600_interrupt(void) {
     _interrupt = 1;
 }
 
-wh2600_response parse_request(int const client, reporter_error * const error) {
+wh2600_response handle_http_request(int const client, reporter_error * const error) {
     char buffer[1024] = {0};
     size_t recieved = recv(client, buffer, 1024, 0);
     if (recieved < 0) {
@@ -68,8 +68,8 @@ wh2600_response parse_request(int const client, reporter_error * const error) {
         }
         char response[] = HTTP_BAD;
         write(client, &response, strlen(response));
-        close(client);
         regfree(&regex);
+        close(client);
         return (wh2600_response) {0};
     }
     regfree(&regex);
@@ -88,8 +88,8 @@ wh2600_response parse_request(int const client, reporter_error * const error) {
         }
         char response[] = HTTP_BAD;
         write(client, &response, strlen(response));
-        close(client);
         regfree(&regex);
+        close(client);
         return (wh2600_response) {0};
     }
     regfree(&regex);
@@ -110,8 +110,8 @@ wh2600_response parse_request(int const client, reporter_error * const error) {
         }
         char response[] = HTTP_BAD;
         write(client, &response, strlen(response));
-        close(client);
         regfree(&regex);
+        close(client);
         return (wh2600_response) {0};
     }
     regfree(&regex);
@@ -145,15 +145,17 @@ void* serve_connection(void * const params) {
     struct sockaddr_in client_addr;
     socklen_t client_addr_len = sizeof(client_addr);
     int client_fd = 0;
-    if ((client_fd = accept(p->server_fd, (struct sockaddr*)&client_addr, &client_addr_len)) < 0) {
+    if ((client_fd = accept(p->server_fd, (struct sockaddr*)&client_addr, &client_addr_len)) == -1) {
         if (p->error) {
             p->error->kind = REPORTER_CONNECTION_ERROR;
             p->error->message = strerror(errno);
         }
         return NULL;
     }
-    p->response = parse_request(client_fd, p->error);
+
+    p->response = handle_http_request(client_fd, p->error);
     p->finished = 1;
+
     return NULL;
 }
 
@@ -181,6 +183,7 @@ wh2600_response wh2600_query(uint64_t const timeout, uint16_t const port, report
             error->kind = REPORTER_CONNECTION_ERROR;
             error->message = strerror(errno);
         }
+        close(fd);
         return (wh2600_response) {0};
     }
 
@@ -189,6 +192,7 @@ wh2600_response wh2600_query(uint64_t const timeout, uint16_t const port, report
             error->kind = REPORTER_CONNECTION_ERROR;
             error->message = strerror(errno);
         }
+        close(fd);
         return (wh2600_response) {0};
     }
 

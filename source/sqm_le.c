@@ -27,7 +27,7 @@ sqm_le_device sqm_le_connect(char const * const address, uint16_t port, reporter
     };
 
     socketfd = socket(AF_INET, SOCK_STREAM, 0);
-    if (!socketfd) {
+    if (socketfd == -1) {
         if(error) {
             error->kind = REPORTER_CONNECTION_ERROR;
             error->message = strerror(errno);

@@ -13,7 +13,7 @@
 #include "reporter_error.h"
 #include "sqm_le.h"
 #include "wh2600.h"
-#include "settings.h"
+#include "configuration.h"
 
 dictionary * _dict = NULL;
 configuration   * _conf = NULL;
@@ -150,6 +150,11 @@ int main(int argc, char* argv[]) {
     };
 
     _conf = calloc(1, sizeof(s));
+    if(_conf == NULL) {
+        perror("calloc");
+        exit(EXIT_FAILURE);
+    }
+        
     memcpy(_conf, &s, sizeof(s));
 
     atexit(cleanup);

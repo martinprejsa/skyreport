@@ -1,3 +1,6 @@
+#ifndef SKYREPORT_CONFIGURATION_H
+#define SKYREPORT_CONFIGURATION_H
+
 #include <stdint.h>
 
 typedef struct {
@@ -16,3 +19,5 @@ typedef struct {
     uint64_t const local_log;
     uint64_t const netxms_log;
 } configuration;
+
+#endif // SKYREPORT_CONFIGURATION_H

@@ -15,28 +15,14 @@
 #include "wh2600.h"
 #include "settings.h"
 
-dictionary * _conf   = NULL;
-settings * _settings = NULL;
-
-void log_sample_netxms(time_t const timestamp, int const humidity, double const temperature, double const brightness) {
-    if(!_settings->netxms_log)
-        return;
-
-    char command[255] = {0};
-    snprintf(command, 255, "%s -t %lu skyreport-fail=false skyreport-surface-brightness=%.2f skyreport-temperature=%.2f skyreport-humidity=%d",
-                _settings->nxapush_bin, timestamp, brightness, temperature, humidity);
-    
-    int code;
-    if((code = system(command)) != 0) {
-        fprintf(stderr, "ERROR: failed to notify nxagent, error code: 0x%X\n", code);;
-    }
-}
+dictionary * _dict = NULL;
+configuration   * _conf = NULL;
 
 void exit_fail(char const * const message, int const exit_code) {
-    if(_settings->netxms_log) {
+    if(_conf->netxms_log) {
         char command[255] = {0};
         // watch out for "
-        snprintf(command, 255, "%s skyreport-fail=true skyreport-fail-message=\"%s\"", _settings->nxapush_bin, message);
+        snprintf(command, 255, "%s skyreport-fail=true skyreport-fail-message=\"%s\"", _conf->nxapush_bin, message);
         int code;
         if((code = system(command)) != 0) {
             fprintf(stderr, "ERROR: failed to notify nxagent, error code: 0x%X\n", code);;
@@ -44,21 +30,21 @@ void exit_fail(char const * const message, int const exit_code) {
     }
 
     fprintf(stderr, "ERROR: %s\n", message);
-
-    iniparser_freedict(_conf);
-    free(_settings);
-
     exit(exit_code);
 }
 
 void handle_sigint(int const sig) {
-    if (sig != SIGINT)
-        return;
-    exit_fail("caught SIGINT; exiting.", 1);
+    fprintf(stderr, "Caught SIGINT, exiting...");
+    wh2600_interrupt();
+}
+
+void cleanup(void) {
+    iniparser_freedict(_dict);
+    free(_conf);
 }
 
 void log_sample_file(time_t const timestamp, int const humidity, double const temperature, double const brightness) {
-    if (!_settings->local_log)
+    if (!_conf->local_log)
         return;
 
     struct tm *local_time = {0};
@@ -67,7 +53,7 @@ void log_sample_file(time_t const timestamp, int const humidity, double const te
     strftime(path_date, 40, "%Y-%m-%d", local_time);
 
     char path[255] = {0};
-    snprintf(path, 255, "%s/skyreport-%s.csv", _settings->log_dir, path_date);
+    snprintf(path, 255, "%s/skyreport-%s.csv", _conf->log_dir, path_date);
     FILE *output = fopen(path, "a");
     if (!output) {
         char error_msg[255] = {0};
@@ -91,10 +77,24 @@ void log_sample_file(time_t const timestamp, int const humidity, double const te
     fclose(output);
 }
 
+void log_sample_netxms(time_t const timestamp, int const humidity, double const temperature, double const brightness) {
+    if(!_conf->netxms_log)
+        return;
+
+    char command[255] = {0};
+    snprintf(command, 255, "%s -t %lu skyreport-fail=false skyreport-surface-brightness=%.2f skyreport-temperature=%.2f skyreport-humidity=%d",
+                _conf->nxapush_bin, timestamp, brightness, temperature, humidity);
+    
+    int code;
+    if((code = system(command)) != 0) {
+        fprintf(stderr, "ERROR: failed to notify nxagent, error code: 0x%X\n", code);;
+    }
+}
+
 void sample(void) {
     reporter_error error = {0};
 
-    sqm_le_device device = sqm_le_connect(_settings->sqm_le_addr, _settings->sqm_le_port, &error);
+    sqm_le_device device = sqm_le_connect(_conf->sqm_le_addr, _conf->sqm_le_port, &error);
     if (error.kind != REPORTER_NO_ERROR) {
         char error_msg[255] = {0};
         snprintf(error_msg, 255, "failed to connect to sqm_le: %s", error.message);
@@ -110,7 +110,7 @@ void sample(void) {
 
     sqm_le_disconnect(&device);
 
-    wh2600_response weather = wh2600_query(_settings->wh2600_timeout, _settings->wh2600_port, &error);
+    wh2600_response weather = wh2600_query(_conf->wh2600_timeout, _conf->wh2600_port, &error);
     if (error.kind != REPORTER_NO_ERROR) {
         char error_msg[255] = {0};
         snprintf(error_msg, 255, "failed to read weather data: %s", error.message);
@@ -119,36 +119,45 @@ void sample(void) {
 
     time_t timestamp = time(NULL);
 
-    log_sample_file(timestamp, weather.humidity, weather.temperature, brightness);
-    log_sample_netxms(timestamp, weather.humidity, weather.temperature, brightness);
+    if(_conf->local_log)
+        log_sample_file(timestamp, weather.humidity, weather.temperature, brightness);
+
+    if(_conf->netxms_log)
+        log_sample_netxms(timestamp, weather.humidity, weather.temperature, brightness);
 }
 
 int main(int argc, char* argv[]) {
-    signal(SIGINT, handle_sigint);
+    struct sigaction sa;
+    sa.sa_handler = handle_sigint;
+    sa.sa_flags = 0;
+    sigemptyset(&sa.sa_mask);
 
-    settings s = (settings) {
-        .sqm_le_port = (uint16_t) iniparser_getuint64(_conf, ":sqm-le-port", 10001),
-        .sqm_le_addr = iniparser_getstring(_conf, ":sqm-le-address", ""),
-        .wh2600_port = (uint16_t) iniparser_getuint64(_conf, ":wh2600-port", 8080),
-        .log_dir = iniparser_getstring(_conf, ":sqm-le-address", "/var/log/skyreport"),
-        .nxapush_bin = iniparser_getstring(_conf, ":sqm-le-address", "nxapush"),
-        .sample_count = iniparser_getuint64(_conf, ":sample-count", 3),
-        .sample_period = iniparser_getuint64(_conf, ":sample-period", 60 * 60 * 3),
-        .wh2600_timeout = iniparser_getuint64(_conf, ":wh2600-timeout", 15),
-        .local_log = iniparser_getuint64(_conf, ":enable-log", 1),
-        .netxms_log = iniparser_getuint64(_conf, ":enable-netxms", 0),
+    sigaction(SIGTERM, &sa, NULL);
+
+    iniparser_load("skyreport.ini");
+
+    configuration s = (configuration) {
+        .sqm_le_port = (uint16_t) iniparser_getuint64(_dict, ":sqm-le-port", 10001),
+        .sqm_le_addr = iniparser_getstring(_dict, ":sqm-le-address", ""),
+        .wh2600_port = (uint16_t) iniparser_getuint64(_dict, ":wh2600-port", 8080),
+        .log_dir = iniparser_getstring(_dict, ":sqm-le-address", "/var/log/skyreport"),
+        .nxapush_bin = iniparser_getstring(_dict, ":sqm-le-address", "nxapush"),
+        .sample_count = iniparser_getuint64(_dict, ":sample-count", 3),
+        .sample_period = iniparser_getuint64(_dict, ":sample-period", 60 * 60 * 3),
+        .wh2600_timeout = iniparser_getuint64(_dict, ":wh2600-timeout", 15),
+        .local_log = iniparser_getuint64(_dict, ":enable-log", 1),
+        .netxms_log = iniparser_getuint64(_dict, ":enable-netxms", 0),
     };
 
-    _settings = calloc(1, sizeof(s));
-    memcpy(_settings, &s, sizeof(s));
+    _conf = calloc(1, sizeof(s));
+    memcpy(_conf, &s, sizeof(s));
 
-    for (unsigned i = 0; i < _settings->sample_count; i++) {
+    atexit(cleanup);
+
+    for (unsigned i = 0; i < _conf->sample_count; i++) {
         sample();
-        sleep(_settings->sample_period);
+        sleep(_conf->sample_period);
     }
-
-    iniparser_freedict(_conf);
-    free(_settings);
 
     return 0;
 }    // vlhkost, teplota, cas, svetelnost

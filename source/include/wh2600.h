@@ -19,4 +19,9 @@ typedef struct {
 */
 wh2600_response wh2600_query(uint64_t timeout, uint16_t port, reporter_error * error);
 
+/**
+* Interrupts the ongoing wh2600 query.
+*/
+void wh2600_interrupt(void);
+
 #endif // REPORTER_WEATHER_H

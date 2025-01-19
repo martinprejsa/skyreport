@@ -3,6 +3,7 @@
 #include <signal.h>
 #include <netinet/in.h>
 #include <pthread.h>
+#include <stdio.h>
 #include <sys/socket.h>
 #include <assert.h>
 #include <stdlib.h>
@@ -33,16 +34,15 @@ typedef struct {
     reporter_error *error;
     unsigned finished;
     wh2600_response response;
-} await_connection_params;
-
+} server_params;
 
 volatile sig_atomic_t _interrupt = 0;
 
-void handle_signal(int signal) {
+void wh2600_interrupt(void) {
     _interrupt = 1;
 }
 
-wh2600_response parse_request(int client, reporter_error *error) {
+wh2600_response parse_request(int const client, reporter_error * const error) {
     char buffer[1024] = {0};
     size_t recieved = recv(client, buffer, 1024, 0);
     if (recieved < 0) {
@@ -136,11 +136,11 @@ wh2600_response parse_request(int client, reporter_error *error) {
     };
 }
 
-void* await_connection(void * params) {
+void* serve_connection(void * const params) {
     pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, NULL);
     pthread_setcanceltype(PTHREAD_CANCEL_ASYNCHRONOUS, NULL);
 
-    await_connection_params* p = params;
+    server_params* const p = params;
 
     struct sockaddr_in client_addr;
     socklen_t client_addr_len = sizeof(client_addr);
@@ -157,8 +157,8 @@ void* await_connection(void * params) {
     return NULL;
 }
 
-wh2600_response wh2600_query(uint64_t timeout, uint16_t port, reporter_error *error) {
-    signal(SIGINT, handle_signal);
+wh2600_response wh2600_query(uint64_t const timeout, uint16_t const port, reporter_error * const error) {
+    _interrupt = 0;
     int fd;
 
     if((fd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
@@ -192,29 +192,38 @@ wh2600_response wh2600_query(uint64_t timeout, uint16_t port, reporter_error *er
         return (wh2600_response) {0};
     }
 
-    pthread_t awaiter = {0};
-    await_connection_params p = {
+    pthread_t server = {0};
+    server_params p = {
         .server_fd = fd,
         .error = error,
         .finished = 0,
         .response = {0},
     };
 
-    pthread_create(&awaiter, NULL, await_connection, (void*) &p);
-    pthread_detach(awaiter);
+    pthread_create(&server, NULL, serve_connection, (void*) &p);
+    pthread_detach(server);
     int end = time(NULL) + timeout;
 
     while(1) {
         if (p.finished) {
             break;
         }
-        if ((time(NULL) >= end) || _interrupt) {
+
+        if ((time(NULL) >= end)) {
             if (error) {
                 error->kind = REPORTER_COMMUNCATION_ERROR;
-                error->message = "weather server ran for too long or was interrupted";
+                error->message = "wh2600 ran for too long";
             }
 
-            pthread_cancel(awaiter);
+            pthread_cancel(server);
+            break;
+        }
+        
+        if(_interrupt) {
+            if (error) {
+                error->kind = REPORTER_COMMUNCATION_ERROR;
+                error->message = "wh2600 was interrupted";
+            }
             break;
         }
     }

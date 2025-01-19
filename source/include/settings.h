@@ -15,4 +15,4 @@ typedef struct {
 
     uint64_t const local_log;
     uint64_t const netxms_log;
-} settings;
+} configuration;

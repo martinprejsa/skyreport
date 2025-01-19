@@ -212,7 +212,7 @@ wh2600_response wh2600_query(uint64_t const timeout, uint16_t const port, report
         if ((time(NULL) >= end)) {
             if (error) {
                 error->kind = REPORTER_COMMUNCATION_ERROR;
-                error->message = "wh2600 ran for too long";
+                error->message = "wh2600 query ran for too long";
             }
 
             pthread_cancel(server);
@@ -222,7 +222,7 @@ wh2600_response wh2600_query(uint64_t const timeout, uint16_t const port, report
         if(_interrupt) {
             if (error) {
                 error->kind = REPORTER_COMMUNCATION_ERROR;
-                error->message = "wh2600 was interrupted";
+                error->message = "wh2600 query was interrupted";
             }
             break;
         }

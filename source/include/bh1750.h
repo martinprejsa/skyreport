@@ -10,51 +10,60 @@ typedef enum bh1750_cmd {
 } bh1750_cmd_t;
 
 typedef enum bh1750_mode {
-    BH1750_CONT_HIGH_RES  = 0x10,
-    BH1750_CONT_HIGH_RES2 = 0x11,
+    BH1750_MODE_UNKNOWN = 0,
+
+    BH1750_MODE_CONT_HIGH_RES  = 0x10,
+    BH1750_MODE_CONT_HIGH_RES2 = 0x11,
     BH1750_CONT_LOW_RES   = 0x13,
     
-    BH1750_ONE_TIME_HIGH_RES  = 0x20,
-    BH1750_ONE_TIME_HIGH_RES2 = 0x21,
-    BH1750_ONE_TIME_LOW_RES   = 0x23,
+    BH1750_MODE_ONE_TIME_HIGH_RES  = 0x20,
+    BH1750_MODE_ONE_TIME_HIGH_RES2 = 0x21,
+    BH1750_MODE_ONE_TIME_LOW_RES   = 0x23,
 } bh1750_mode_t;
 
 typedef struct bh1750_handle {
     bh1750_mode_t mode;
 } bh1750_handle_t;
 
-
 /*
-* Locates the BH1750 device on the i2c bus.
-* Returns a handle to the BH1750 device or -1 on error.
+* Locate the BH1750 device on the i2c bus.
+* Return 1 on success, 0 otherwise.
 */
-bh1750_handle_t* bh1750_init(void);
+int bh1750_init(bh1750_handle_t * handle);
 
 /*
-* Sets the BH1750 device mode.
-* Returns 1 on success, 0 otherwise.
+* Set the error callback
+* If callback is NULL, the default callback is used.
+*/
+void 
+bh1750_set_error_callback(int (*callback)(char const * const format, ...));
+
+/*
+* Set the BH1750 device mode.
+* Return 1 on success, 0 otherwise.1
 */
 int
 bh1750_set_mode(bh1750_handle_t * const handle, bh1750_mode_t const mode);
 
 /*
-* Sets the BH1750 device measurement time.
-* Returns 1 on success, 0 otherwise.
+* Set the BH1750 device measurement time.
+* Return 1 on success, 0 otherwise.
 */
 int
 bh1750_set_measurement_time(bh1750_handle_t * const handle);
 
 /*
-* Reads a measurement from the BH1750 device.
+* Read a measurement from the BH1750 device.
+* Return the measured value in lux, -1 on error. 
+*
 * The correct timing will be applied acording to 
-* the currently selected operating mode.
-* Returns the measured value in lux, -1 on error. 
+* the currently selected operating mode and the function will block.
 */
 int32_t 
 bh1750_read_measurement(bh1750_handle_t * const handle);
 
 /*
-* Destroys the handle
+* Destroy the handle
 */
 void
 bh1750_destroy(bh1750_handle_t * handle);

@@ -7,21 +7,14 @@
 #include <linux/i2c-dev.h>
 #include <sys/ioctl.h>
 #include <unistd.h>
-#include <math.h>
 #include <inttypes.h>
 
-// calculates difference in miliseconds between two timespec structs
+// calculates difference in nanoseconds between two timespec structs
 uint64_t 
-timespec_mili_diff(struct timespec const * const t1, struct timespec const * const  t2) {
+timespec_nano_diff(struct timespec const * const t1, struct timespec const * const  t2) {
 	uint64_t diff = 0;
-	diff += (t1->tv_sec - t2->tv_sec) * 1000;
-	uint64_t diff_nsec = (t1->tv_nsec - t2->tv_nsec);
-	if (diff_nsec > 1e6) {
-	    double diff_f = diff_nsec / 1e6;
-	    uint64_t diff_i = floor(diff_f);
-	    diff += diff_i;
-	}
-
+	diff += (t1->tv_sec - t2->tv_sec) * 1e9;
+	diff += (t1->tv_nsec - t2->tv_nsec);
 	return diff;
 }
 
@@ -107,7 +100,7 @@ bh1750_read_measurement(bh1750_handle_t * const handle) {
 	struct timespec now;
 	timespec_get(&now, TIME_UTC);
 
-	uint64_t diff = timespec_mili_diff(&now, &handle->since);
+	uint64_t diff = timespec_nano_diff(&now, &handle->since);
 	printf("%" PRIu64 "\n", diff);
 }
 

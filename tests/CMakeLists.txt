@@ -15,7 +15,6 @@ target_compile_options(weather_test PRIVATE -g)
 add_executable(bh1750_test)
 target_sources(bh1750_test PRIVATE bh1750_test.c ../source/bh1750.c)
 target_include_directories(bh1750_test PRIVATE ../source/include)
-target_link_libraries(bh1750_test PRIVATE m)
 target_compile_options(bh1750_test PRIVATE -g)
 
 

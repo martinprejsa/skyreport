@@ -11,7 +11,6 @@
 #include <time.h>
 #include <unistd.h>
 #include <threads.h>
-#include <math.h>
 #include <stdlib.h>
 
 uint64_t mode_max_timeout(bh1750_mode_t mode) {

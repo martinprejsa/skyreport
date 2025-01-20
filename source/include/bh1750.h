@@ -2,6 +2,7 @@
 #define SKYREPORT_BH1750_H
 
 #include <stdint.h>
+#include <time.h>
 
 typedef enum bh1750_cmd {
     BH1750_CMD_POWER_DOWN = 0x0,
@@ -22,7 +23,9 @@ typedef enum bh1750_mode {
 } bh1750_mode_t;
 
 typedef struct bh1750_handle {
-    bh1750_mode_t mode;
+    bh1750_mode_t   mode;
+    int             fd;    // i2c bus file descriptor
+    struct timespec since; // time since last measurement query/mode change
 } bh1750_handle_t;
 
 /*

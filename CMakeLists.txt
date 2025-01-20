@@ -18,7 +18,7 @@ target_compile_options(skyreport PUBLIC -Wall -pedantic -fvisibility=hidden)
 
 target_sources(skyreport PRIVATE source/main.c source/sqm_le.c source/wh2600.c source/bh1750.c)
 target_include_directories(skyreport PRIVATE source/include)
-target_link_libraries(skyreport PRIVATE iniparser-static)
+target_link_libraries(skyreport PRIVATE iniparser-static m)
 
 if (BUILD_TESTS) 
     enable_testing()

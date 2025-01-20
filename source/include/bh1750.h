@@ -62,7 +62,7 @@ bh1750_set_measurement_time(bh1750_handle_t * const handle);
 * The correct timing will be applied acording to 
 * the currently selected operating mode and the function will block.
 */
-int32_t 
+float 
 bh1750_read_measurement(bh1750_handle_t * const handle);
 
 /*

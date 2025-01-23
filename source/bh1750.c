@@ -13,7 +13,7 @@
 #include <threads.h>
 #include <stdlib.h>
 
-uint64_t mode_max_timeout(bh1750_mode_t mode) {
+uint64_t mode_max_timeout_milis(bh1750_mode_t mode) {
     switch(mode) {
         case BH1750_MODE_UNKNOWN:
             return 0;
@@ -132,7 +132,8 @@ bh1750_read_measurement(bh1750_handle_t * const handle) {
     // Calculate the difference from now to the last command execution.
     // Then subtract it from the maximum timeout.
     // The result is the amount of time that we should wait.
-	uint64_t diff = mode_max_timeout(handle->mode) - timespec_nano_diff(&now, &handle->since);
+    // 1 mili = 1e6 nano
+	uint64_t diff = (mode_max_timeout_milis(handle->mode) * 1e6) - timespec_nano_diff(&now, &handle->since);
     if (diff > 0)
         thrd_sleep(&(struct timespec) {.tv_nsec=diff}, NULL);
 

@@ -18,6 +18,7 @@ typedef struct {
 
     uint64_t const local_log;
     uint64_t const netxms_log;
+    uint64_t const max_log_size;
 } configuration;
 
 #endif // SKYREPORT_CONFIGURATION_H

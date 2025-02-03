@@ -9,11 +9,15 @@
 #include <pthread.h>
 #include <dictionary.h>
 #include <iniparser.h>
+#include <dirent.h>
+#include <time.h>
 
 #include "reporter_error.h"
 #include "sqm_le.h"
 #include "wh2600.h"
 #include "configuration.h"
+
+#define LOG_FILE_TIME_FORMAT_STR "%Y-%m-%d"
 
 dictionary * _dict = NULL;
 configuration   * _conf = NULL;
@@ -50,7 +54,7 @@ void log_sample_file(time_t const timestamp, int const humidity, double const te
     struct tm *local_time = {0};
     local_time = localtime (&timestamp);
     char path_date[40] = {0};
-    strftime(path_date, 40, "%Y-%m-%d", local_time);
+    strftime(path_date, 40, LOG_FILE_TIME_FORMAT_STR, local_time);
 
     char path[255] = {0};
     snprintf(path, 255, "%s/skyreport-%s.csv", _conf->log_dir, path_date);
@@ -126,6 +130,48 @@ void sample(void) {
         log_sample_netxms(timestamp, weather.humidity, weather.temperature, brightness);
 }
 
+
+void cleanup_logs(void) {
+    struct dirent *dir;
+    DIR *d = opendir(_conf->log_dir);
+    if (d == NULL) {
+        perror("can't operate on log directory");
+        exit(EXIT_FAILURE);
+    } 
+    dir = readdir(d);
+    while((dir = readdir(d)) != NULL) {
+        if(strncmp("skyreport-", dir->d_name, 10) == 0) {
+            //starts with skyreport-
+            int len = strlen(dir->d_name);
+            // skyreport- + .csv
+            if (len > 14) { 
+                puts(dir->d_name);
+                puts(dir->d_name+strlen(dir->d_name)-4);
+                if (strncmp(".csv", dir->d_name+strlen(dir->d_name)-4, 4) == 0) {
+                    // ends with .csv
+                    puts(dir->d_name);
+                    char date_str[255] = {0};
+
+                    // copy the date 
+                    strncpy(date_str, dir->d_name+10, strlen(dir->d_name) - 14);
+                    puts(date_str);
+
+                    struct tm then = {0};
+                    strptime(date_str, LOG_FILE_TIME_FORMAT_STR, &then);
+
+                    struct tm now = {0};
+                    mktime(&now);
+
+                    if(abs(now.tm_yday - then.tm_yday) >= 30) {
+                        char path[255] = {0};
+                        remove()
+                    }
+                }        
+            }
+        } 
+    }
+}
+
 int main(int argc, char* argv[]) {
     struct sigaction sa;
     sa.sa_handler = handle_sigint;
@@ -140,7 +186,7 @@ int main(int argc, char* argv[]) {
         .sqm_le_port = (uint16_t) iniparser_getuint64(_dict, ":sqm-le-port", 10001),
         .sqm_le_addr = iniparser_getstring(_dict, ":sqm-le-address", ""),
         .wh2600_port = (uint16_t) iniparser_getuint64(_dict, ":wh2600-port", 8080),
-        .log_dir = iniparser_getstring(_dict, ":sqm-le-address", "/var/log/skyreport"),
+        .log_dir = iniparser_getstring(_dict, ":log-dir", "."),
         .nxapush_bin = iniparser_getstring(_dict, ":sqm-le-address", "nxapush"),
         .sample_count = iniparser_getuint64(_dict, ":sample-count", 3),
         .sample_period = iniparser_getuint64(_dict, ":sample-period", 60 * 60 * 3),
@@ -159,8 +205,10 @@ int main(int argc, char* argv[]) {
 
     atexit(cleanup);
 
+    cleanup_logs();
+
     for (unsigned i = 0; i < _conf->sample_count; i++) {
-        sample();
+        //sample();
         sleep(_conf->sample_period);
     }
 
